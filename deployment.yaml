@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-arc
+  namespace: arc-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hello-arc
+  template:
+    metadata:
+      labels:
+        app: hello-arc
+    spec:
+      containers:
+        - name: hello-arc
+          image: nginx:1.27-alpine
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
