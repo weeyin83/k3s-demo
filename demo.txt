@@ -1,0 +1,242 @@
+AZURE ARC K3S GITOPS DEMO
+==========================
+
+Purpose
+-------
+This demo shows how Azure Arc can use GitOps (Flux) to deploy and continuously
+manage an application on a K3s cluster running outside Azure.
+
+Cluster: k3s-hyperv-demo
+
+
+1. CREATE A GITHUB REPOSITORY
+-----------------------------
+
+Create a new public GitHub repository. For example:
+
+    arc-k3s-gitops-demo
+
+Create this directory and file structure in the repository:
+
+    arc-k3s-gitops-demo/
+    `-- k3s-demo/
+        |-- namespace.yaml
+        |-- deployment.yaml
+        |-- service.yaml
+        `-- kustomization.yaml
+
+
+2. FILE: k3s-demo/namespace.yaml
+--------------------------------
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: arc-demo
+
+
+3. FILE: k3s-demo/deployment.yaml
+---------------------------------
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-arc
+  namespace: arc-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hello-arc
+  template:
+    metadata:
+      labels:
+        app: hello-arc
+    spec:
+      containers:
+        - name: hello-arc
+          image: nginx:1.27-alpine
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+
+
+4. FILE: k3s-demo/service.yaml
+------------------------------
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-arc
+  namespace: arc-demo
+spec:
+  type: NodePort
+  selector:
+    app: hello-arc
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30080
+
+
+5. FILE: k3s-demo/kustomization.yaml
+------------------------------------
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - deployment.yaml
+  - service.yaml
+
+
+6. COMMIT THE FILES
+-------------------
+
+Commit all four files to the main branch of the GitHub repository.
+
+The repository must be public for this simple setup. A private repository
+requires authentication configuration and is better left for a later demo.
+
+
+7. CONNECT THE REPOSITORY TO AZURE ARC
+--------------------------------------
+
+In the Azure portal:
+
+1. Open Azure Arc.
+2. Select Kubernetes clusters.
+3. Open k3s-hyperv-demo.
+4. Select GitOps.
+5. Select Create.
+6. Use the following settings:
+
+    Configuration name:  arc-demo
+    Flux namespace:      flux-system
+    Scope:               Cluster
+    Repository URL:      https://github.com/YOUR-GITHUB-NAME/arc-k3s-gitops-demo
+    Repository type:     Public
+    Reference type:      Branch
+    Branch:              main
+    Configuration path:  ./k3s-demo
+    Sync interval:       1 minute
+
+7. Create the configuration.
+8. Wait for the GitOps configuration to report Compliant or Succeeded.
+
+Replace YOUR-GITHUB-NAME with the GitHub account or organization that owns
+the repository.
+
+
+8. VERIFY THE DEPLOYMENT ON UBUNTU
+----------------------------------
+
+Run these commands on the Ubuntu K3s server:
+
+    sudo k3s kubectl get namespaces
+    sudo k3s kubectl get deployments,pods,services -n arc-demo
+
+Expected result:
+
+- The arc-demo namespace exists.
+- The hello-arc deployment is ready.
+- One hello-arc pod is Running.
+- The hello-arc service exposes NodePort 30080.
+
+Test the application locally from the Ubuntu server:
+
+    curl http://localhost:30080
+
+To open it from another computer, browse to:
+
+    http://UBUNTU-SERVER-IP:30080
+
+Replace UBUNTU-SERVER-IP with the IP address of the K3s Ubuntu server.
+
+If Ubuntu Firewall is enabled, permit the demo port:
+
+    sudo ufw allow 30080/tcp
+
+Only expose this port on a trusted demo network. Do not expose it directly to
+the public internet.
+
+
+9. DEMONSTRATE AZURE ARC GITOPS
+-------------------------------
+
+In GitHub, edit k3s-demo/deployment.yaml and change:
+
+    replicas: 1
+
+to:
+
+    replicas: 2
+
+Commit the change to the main branch.
+
+On the Ubuntu server, watch the pods:
+
+    sudo k3s kubectl get pods -n arc-demo --watch
+
+Within a few minutes, Flux should apply the Git change and a second pod should
+appear. The Azure portal GitOps configuration should remain compliant.
+
+
+10. OPTIONAL KUBERNETES SELF-HEALING DEMO
+-----------------------------------------
+
+Delete the application pod:
+
+    sudo k3s kubectl delete pod -n arc-demo -l app=hello-arc
+
+Then watch Kubernetes create a replacement:
+
+    sudo k3s kubectl get pods -n arc-demo --watch
+
+Important distinction:
+
+- Changing replicas in Git demonstrates Azure Arc GitOps and Flux.
+- Recreating a deleted pod demonstrates Kubernetes self-healing.
+
+
+11. CUSTOMER EXPLANATION
+------------------------
+
+This K3s cluster and its application run on an Ubuntu server in Hyper-V, not
+in Azure. Azure Arc connects the cluster to Azure through an outbound secure
+connection. The cluster becomes visible as an Azure resource and can use Azure
+services for inventory, governance, monitoring, security, access control, and
+GitOps.
+
+In this demo, Flux pulls the approved application configuration from GitHub
+and applies it to the on-premises K3s cluster. Git provides version history and
+an auditable source of truth. Flux continuously checks that the cluster matches
+the desired state in Git and applies committed changes automatically.
+
+Azure Arc does not turn K3s into AKS. The customer still operates Ubuntu, K3s,
+cluster upgrades, capacity, backups, and availability. Arc provides a common
+Azure management and governance layer for Kubernetes clusters running outside
+Azure.
+
+
+12. CLEAN UP
+------------
+
+First delete the GitOps configuration from the Azure portal if it is no longer
+needed. Depending on the deletion options selected, workloads may remain on the
+cluster.
+
+To remove the demo workload directly from K3s:
+
+    sudo k3s kubectl delete namespace arc-demo
+
+
+Microsoft documentation:
+https://learn.microsoft.com/azure/azure-arc/kubernetes/overview
+https://learn.microsoft.com/azure/azure-arc/kubernetes/tutorial-use-gitops-flux2
