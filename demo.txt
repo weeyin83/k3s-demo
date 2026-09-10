@@ -127,11 +127,36 @@ In the Azure portal:
     Configuration path:  ./k3s-demo
     Sync interval:       1 minute
 
-7. Create the configuration.
-8. Wait for the GitOps configuration to report Compliant or Succeeded.
+7. On the Create a Kustomization page, create a Kustomization with these
+   settings:
+
+    Kustomization name:  arc-demo
+    Path:                ./k3s-demo
+    Sync interval:       1 minute
+    Timeout:             5 minutes
+    Prune:               Enabled
+    Force:               Disabled
+    Wait:                Enabled
+
+   Leave Depends on, Health checks, and Post-build substitutions empty unless
+   the wizard requires a value.
+
+8. Finish creating the GitOps configuration.
+9. Wait for the GitOps configuration and Kustomization to report Compliant or
+   Succeeded.
 
 Replace YOUR-GITHUB-NAME with the GitHub account or organization that owns
 the repository.
+
+The Azure wizard Kustomization and the k3s-demo/kustomization.yaml file are
+related but different:
+
+- The Azure Flux Kustomization tells Flux to monitor the ./k3s-demo folder.
+- The kustomization.yaml file tells Kustomize which YAML resources in that
+  folder to apply.
+
+Prune allows Flux to remove Kubernetes resources that are removed from Git.
+Keep this GitOps configuration limited to the disposable arc-demo workload.
 
 
 8. VERIFY THE DEPLOYMENT ON UBUNTU
