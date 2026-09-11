@@ -25,3 +25,11 @@ spec:
             limits:
               cpu: 100m
               memory: 64Mi
+          volumeMounts:
+            - name: website-content
+              mountPath: /usr/share/nginx/html
+              readOnly: true
+      volumes:
+        - name: website-content
+          configMap:
+            name: hello-arc-content
