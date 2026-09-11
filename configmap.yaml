@@ -40,28 +40,54 @@ data:
           line-height: 1.7;
         }
 
-        .status {
-          display: inline-block;
-          margin-top: 20px;
-          padding: 8px 12px;
-          border-left: 4px solid #2e8540;
-          background: #edf7ef;
+        .details {
+          display: grid;
+          grid-template-columns: max-content 1fr;
+          gap: 10px 20px;
+          margin-top: 28px;
+          padding: 20px;
+          border-left: 4px solid #0078d4;
+          background: #eef6fc;
           font-family: monospace;
+        }
+
+        .label {
+          font-weight: bold;
+        }
+
+        .status {
+          color: #217a36;
+          font-weight: bold;
         }
       </style>
     </head>
     <body>
       <main>
         <h1>Hello from K3s</h1>
+
         <p>
           This website is running on my Ubuntu server in Hyper-V and is
           managed from Azure using Azure Arc and Flux GitOps.
         </p>
+
         <p>
           The application remains on-premises. Its desired configuration
           is stored in GitHub and continuously reconciled onto Kubernetes.
         </p>
-        <div class="status">k3s-hyperv-demo: connected</div>
+
+        <div class="details">
+          <span class="label">Cluster</span>
+          <span>k3s-hyperv-demo</span>
+
+          <span class="label">Status</span>
+          <span class="status">Connected</span>
+
+          <span class="label">Demo version</span>
+          <span>Version 1</span>
+
+          <span class="label">Last updated</span>
+          <span>11 September 2026, 10:00</span>
+        </div>
       </main>
     </body>
     </html>
